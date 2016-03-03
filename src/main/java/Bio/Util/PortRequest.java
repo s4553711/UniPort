@@ -1,12 +1,11 @@
 package Bio.Util;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 
 public class PortRequest {
 	private Socket socket;
-	private DataOutputStream out;
+	private PrintWriter	out;
 
 	public PortRequest(String host, int port) {
 		 initTcpClient(host, port);
@@ -15,18 +14,24 @@ public class PortRequest {
 	private void initTcpClient(String host, int port) {
 		try {
 			socket = new Socket(host, port);
-			out = new DataOutputStream(socket.getOutputStream());
+			out = new PrintWriter(socket.getOutputStream(), true);
 		} catch (Exception e) {
 			System.out.println("TCP client inicate falied! "+e);
 		}
 	}
 
-	public void push(byte[] line, int nRead) {
+	public int push(String line) {
+		int result = 0;
 		try {
-			out.write(line, 0, nRead);
+		    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			out.println(line);
+			result = Integer.valueOf(in.readLine());
+			//System.out.println("client get : " + in.readLine());
+			in.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return result;
 	}
 
 	public void closePusher() {

@@ -1,21 +1,26 @@
 package Bio.Util;
 
+import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
 public class PortManager {
 	private ServerSocket server;
+	private PortPool pool;
 
 	public PortManager(int port) {
 		try {
 			server = new ServerSocket(port);
+			pool = new PortPool();
 		} catch(Exception e) {
 			System.out.println("Server Error");
 		}
@@ -23,34 +28,28 @@ public class PortManager {
 
 	public void receive() {
 		Socket s1;
+		boolean stop = false;
 		while(true) {
 			try {
 				s1 = server.accept();
-				DataInputStream in = new DataInputStream(s1.getInputStream());
-				int bytesRead = 0;
-				byte[] receiveData = new byte[8192];
-				boolean end = false;
 				String receive = "";
-				while(!end) {
-					bytesRead = in.read(receiveData);
-					if (bytesRead == -1) {
-						end = true;
-					} else {
-						byte[] realPack = Arrays.copyOfRange(receiveData, 0, bytesRead);
-						receive = new String(realPack).trim();
+				BufferedReader in = new BufferedReader(new InputStreamReader(s1.getInputStream()));
+				PrintWriter out = new PrintWriter(s1.getOutputStream(), true);
+	
+				while ((receive = in.readLine()) != null) {
+					System.out.println("Server > receive: "+receive);
+					if(receive.equals("shutdown")) {
+						stop = true;
+						break;
+					} else if (receive.equals("new")) {
+						out.println(pool.getPort());
 					}
 				}
-				//System.out.println("GET> "+receive);
-				if(receive.equals("shutdown")) {
-					break;
-				} else if (receive.equals("new")) {
-					PrintWriter out = new PrintWriter(s1.getOutputStream());
-					out.println("You get 778899");
-					System.out.println("778899");
-				}
 			} catch (IOException e) {
+				System.out.println("Connection failed");
 				e.printStackTrace();
 			}
+			if (stop) break;
 		}
 		closeManager();
 	}
